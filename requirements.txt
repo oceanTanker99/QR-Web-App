@@ -1,0 +1,4 @@
+Flask>=2.0
+qrcode[pil]>=7.0
+validators>=0.20
+html5-qrcode  # Library baru

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced QR Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4 max-w-2xl">
+        <!-- Tab Navigation -->
+        <div class="tabs flex gap-2 mb-8">
+            <button onclick="switchTab('generate')" 
+                    class="tab-btn px-4 py-2 rounded-lg bg-blue-500 text-white">
+                Generate QR
+            </button>
+            <button onclick="switchTab('scan')" 
+                    class="tab-btn px-4 py-2 rounded-lg bg-green-500 text-white">
+                Scan QR
+            </button>
+        </div>
+
+        <!-- Generate Tab -->
+        <div id="generateTab" class="tab-content">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h1 class="text-2xl font-bold mb-4">Generate QR Code</h1>
+                <form id="qrForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">URL:</label>
+                        <input type="text" id="url" name="url" 
+                               class="w-full p-2 border rounded-md" 
+                               placeholder="https://example.com">
+                    </div>
+                    <button type="submit" 
+                            class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">
+                        Generate
+                    </button>
+                </form>
+                <div id="result" class="mt-4 hidden">
+                    <img id="qrImage" class="mx-auto mb-4" style="max-width: 300px;">
+                    <a id="downloadBtn" 
+                       class="bg-green-500 text-white p-2 rounded-md hover:bg-green-600 cursor-pointer">
+                        Download QR Code
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan Tab -->
+        <div id="scanTab" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h1 class="text-2xl font-bold mb-4">Scan QR Code</h1>
+                <div id="reader" class="w-full h-64 bg-gray-200 rounded-md mb-4"></div>
+                <div id="scanResult" class="hidden">
+                    <p class="font-medium">Hasil Scan:</p>
+                    <p id="scannedData" class="break-words"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Management
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+            
+            if(tabName === 'scan') initializeScanner();
+            else stopScanner();
+        }
+
+        // QR Generation
+        document.getElementById('qrForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('url').value;
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                
+                const data = await response.json();
+                if(data.error) throw new Error(data.error);
+                
+                document.getElementById('qrImage').src = data.img_data;
+                document.getElementById('result').classList.remove('hidden');
+                document.getElementById('downloadBtn').href = data.img_data;
+            } catch(err) {
+                alert(err.message);
+            }
+        });
+
+        // QR Scanning
+        let html5QrCode;
+        function initializeScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: 250 };
+            
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config,
+                qrCodeSuccess,
+                qrCodeError
+            ).catch(err => console.error(err));
+        }
+
+        function stopScanner() {
+            if(html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('scanResult').classList.add('hidden');
+                });
+            }
+        }
+
+        function qrCodeSuccess(decodedText) {
+            document.getElementById('scannedData').textContent = decodedText;
+            document.getElementById('scanResult').classList.remove('hidden');
+        }
+
+        function qrCodeError(error) {
+            console.log(`QR Scan error: ${error}`);
+        }
+    </script>
+</body>
+</html>
